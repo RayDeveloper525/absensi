@@ -3,290 +3,517 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PASKIB-TRACK PRO v3</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>PRASAKA22-ABSENSI</title>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: radial-gradient(circle at top right, #1e293b, #020617); color: white; }
-        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .sidebar-active { transform: translateX(0) !important; }
-        /* Animasi */
-        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Scanner Styling */
-        #reader { border-radius: 20px; overflow: hidden; border: 2px solid #38bdf8 !important; }
-        #reader video { object-fit: cover !important; }
+        :root { --glass: rgba(255,255,255,0.08); --border: rgba(255,255,255,0.1); --primary: #38bdf8; --danger: #fb7185; --success: #4ade80; }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
+        body { background: radial-gradient(circle at top right, #1e293b, #020617); height:100vh; overflow:hidden; color:white; }
+        #splash { position:fixed; inset:0; background:#020617; display:flex; justify-content:center; align-items:center; z-index:2000; transition: 0.5s; cursor: pointer; }
+        .typing { font-size:1rem; border-right:2px solid var(--primary); white-space:nowrap; overflow:hidden; width:0; animation:typing 1.2s steps(20) forwards; letter-spacing:3px; font-weight:800; color:var(--primary); }
+        @keyframes typing { from { width:0 } to { width:220px } }
+        #auth-screen { position:fixed; inset:0; background:#020617; z-index:1500; display:flex; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
+        .auth-card { animation: slideUp 0.6s ease-out; margin: auto; }
+        @keyframes slideUp { from { opacity:0; transform: translateY(30px); } to { opacity:1; transform: translateY(0); } }
+        #sidebar { position:fixed; left:-280px; top:0; width:280px; height:100%; background:rgba(2,6,23,0.95); backdrop-filter:blur(20px); border-right:1px solid var(--border); z-index:1000; transition:0.4s ease; padding:40px 20px; display:flex; flex-direction:column; }
+        #sidebar.active { left:0; }
+        .menu-item { display:flex; align-items:center; padding:16px; margin-bottom:8px; border-radius:16px; cursor:pointer; color:rgba(255,255,255,0.6); }
+        .menu-item.active { background:var(--primary); color:#020617; font-weight:800; }
+        .overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); display:none; z-index:999; }
+        header { padding:20px; display:flex; justify-content:space-between; align-items:center; }
+        .page { display:none; padding:0 20px 20px; height:calc(100vh - 80px); overflow-y:auto; }
+        .page.active { display:block; }
+        .glass-card { background:var(--glass); backdrop-filter:blur(12px); border:1px solid var(--border); border-radius:24px; padding:20px; margin-bottom:15px; }
+        .btn { padding:18px; border:none; border-radius:20px; font-weight:800; cursor:pointer; transition:0.2s; font-size:0.9rem; text-transform: uppercase; }
+        .btn-main { background:white; color:#020617; width:100%; }
+        .btn-ghost { background:var(--glass); color:white; border:1px solid var(--border); width:100%; }
+        #reader { width:100%; max-width: 250px; margin: 0 auto 15px auto; border-radius:20px; overflow:hidden; display:none; border:2px solid var(--primary); aspect-ratio: 1/1; }
+        
+        select option { color: #000; background: #fff; } 
+
+        #sys-dialog { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(10px); }
+        .glass-card-popup { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 35px; padding: 40px 30px; width: 100%; max-width: 340px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); transform: scale(0.8); opacity: 0; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        #sys-dialog.active .glass-card-popup { transform: scale(1); opacity: 1; }
     </style>
 </head>
-<body class="min-h-screen overflow-hidden">
+<body>
+    <div id="splash" onclick="this.remove()"><div class="typing">ABSEN PRASAKA22</div></div>
 
-    <div id="splash" class="fixed inset-0 z-[2000] bg-[#020617] flex items-center justify-center transition-opacity duration-700">
-        <div class="text-center">
-            <h2 class="text-primary text-xl font-extrabold tracking-[0.3em] animate-pulse text-blue-400">COMMAND CENTER v3</h2>
-            <p class="text-gray-500 text-xs mt-2 uppercase tracking-widest">Satuan Inti Kelas 8</p>
+    <div id="sys-dialog">
+        <div class="glass-card-popup" id="sys-dialog-card">
+            <div id="sys-dialog-icon" class="w-20 h-20 mx-auto mb-5 flex items-center justify-center rounded-full bg-white/5 border border-white/10" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
+            <h3 id="sys-dialog-title" class="text-2xl font-black uppercase mb-2 tracking-tighter" style="font-size: 24px; font-weight: 900; margin-bottom: 8px;">TITLE</h3>
+            <p id="sys-dialog-msg" class="text-[11px] font-bold text-gray-400 mb-8 uppercase tracking-widest leading-relaxed" style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 32px; letter-spacing: 0.1em; line-height: 1.6;">Message</p>
+            <input type="text" id="sys-dialog-input" class="hidden w-full p-4 bg-black/20 border border-white/10 rounded-2xl mb-6 text-center font-bold outline-none text-white focus:border-blue-500 transition-all" autocomplete="off" placeholder="••••••">
+            <div id="sys-dialog-btns" class="flex gap-3" style="display:flex; gap:12px;"></div>
         </div>
     </div>
 
-    <div id="overlay" class="fixed inset-0 bg-black/60 z-[998] hidden transition-opacity" onclick="toggleSidebar()"></div>
-
-    <aside id="sidebar" class="fixed left-0 top-0 h-full w-[280px] glass z-[999] -translate-x-full transition-transform duration-300 ease-in-out p-6 flex flex-col">
-        <div class="mb-10 px-2">
-            <h2 class="text-2xl font-extrabold text-blue-400 tracking-tighter">PASKIBRA</h2>
-            <p class="text-[10px] text-gray-400 tracking-widest uppercase">Eskul Kelas 8</p>
-        </div>
-        <nav class="space-y-2 flex-grow">
-            <button onclick="showPage('home', this)" class="nav-link active w-full flex items-center p-4 rounded-2xl bg-blue-500 text-slate-900 font-bold transition-all">
-                <i data-lucide="home" class="mr-4"></i> Beranda
-            </button>
-            <button onclick="showPage('profile', this)" class="nav-link w-full flex items-center p-4 rounded-2xl hover:bg-white/10 transition-all">
-                <i data-lucide="user" class="mr-4"></i> Profil Anggota
-            </button>
-            <button onclick="showPage('history', this)" class="nav-link w-full flex items-center p-4 rounded-2xl hover:bg-white/10 transition-all">
-                <i data-lucide="file-text" class="mr-4"></i> Riwayat Absen
-            </button>
-            <button onclick="showPage('gps', this)" class="nav-link w-full flex items-center p-4 rounded-2xl hover:bg-white/10 transition-all">
-                <i data-lucide="map-pin" class="mr-4"></i> Area Latihan
-            </button>
-        </nav>
-        <div class="mt-auto border-t border-white/10 pt-4 px-2">
-            <p class="text-xs text-gray-500 text-center">Version 3.0 Final Build</p>
-        </div>
-    </aside>
-
-    <header class="flex items-center justify-between p-4 lg:px-10 z-10">
-        <button onclick="toggleSidebar()" class="p-3 glass rounded-2xl hover:bg-white/10 active:scale-90 transition-all">
-            <i data-lucide="menu" class="w-6 h-6"></i>
-        </button>
-        <div class="text-center">
-            <p class="text-[10px] text-gray-500 tracking-widest uppercase">Unit Komando</p>
-            <h1 id="page-title" class="text-sm font-extrabold tracking-widest">BERANDA</h1>
-        </div>
-        <button class="p-3 glass rounded-2xl opacity-50"><i data-lucide="bell" class="w-6 h-6"></i></button>
-    </header>
-
-    <main class="max-w-6xl mx-auto px-4 h-[calc(100vh-100px)] overflow-y-auto">
-        
-        <section id="home" class="page active fade-in space-y-6 py-4">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div id="auth-screen">
+        <div class="w-full max-w-sm glass-card text-center auth-card my-10">
+            <img id="app-logo" src="https://upload.wikimedia.org/wikipedia/commons/b/b2/Badge_Paskibraka.png" class="w-20 h-20 mx-auto mb-6 object-contain">
+            
+            <div id="login-form">
+                <h2 class="text-xl font-black text-blue-400 mb-6 uppercase tracking-widest">Login Anggota</h2>
+                <input type="text" id="l-name" placeholder="NAMA LENGKAP" class="w-full p-4 bg-white/5 border border-white/10 rounded-2xl mb-4 uppercase font-bold text-center outline-none focus:border-blue-500 text-white">
+                <input type="password" id="l-pin" placeholder="PIN" class="w-full p-4 bg-white/5 border border-white/10 rounded-2xl mb-6 text-center tracking-[1em] font-bold outline-none focus:border-blue-500 text-white">
+                <button onclick="prosesLogin()" id="btn-login" class="w-full bg-blue-500 text-slate-900 py-4 rounded-[20px] font-black uppercase active:scale-95 transition-all">Masuk</button>
+                <p class="text-[10px] text-gray-400 mt-4 uppercase">Baru? <button onclick="toggleAuth()" class="text-blue-400 font-bold underline">Daftar</button></p>
+            </div>
+            
+            <div id="reg-form" class="hidden text-left">
+                <h2 class="text-xl font-black text-green-400 mb-6 uppercase text-center tracking-widest">Registrasi</h2>
+                <input type="text" id="r-name" placeholder="NAMA LENGKAP" class="w-full p-4 bg-white/5 border border-white/10 rounded-2xl mb-3 uppercase font-bold text-center outline-none text-white">
+                <input type="email" id="r-email" placeholder="EMAIL AKTIF" class="w-full p-4 bg-white/5 border border-white/10 rounded-2xl mb-3 font-bold text-center outline-none text-white">
                 
-                <div class="glass rounded-[40px] p-8 text-center flex flex-col justify-center items-center">
-                    <div class="bg-blue-500/10 text-blue-400 px-4 py-1 rounded-full text-[10px] font-bold mb-4 uppercase tracking-widest">Waktu Presensi</div>
-                    <h1 id="clock" class="text-6xl lg:text-8xl font-extrabold tracking-tighter leading-none">00:00</h1>
-                    <p id="date" class="text-gray-400 mt-4 font-medium"></p>
+                <select id="r-role" class="w-full p-4 bg-white/5 border border-white/10 rounded-2xl mb-3 font-bold text-center outline-none text-white appearance-none">
+                    <option value="" disabled selected>-- PILIH ROLE --</option>
+                    <option value="PELATIH">PELATIH</option>
+                    <option value="STRUKTUR">STRUKTUR</option>
+                    <option value="ANGGOTA">ANGGOTA</option>
+                </select>
+                <div class="flex gap-3 mb-3">
+                    <input type="text" id="r-kelas" placeholder="KELAS" class="w-1/2 p-4 bg-white/5 border border-white/10 rounded-2xl uppercase font-bold text-center outline-none text-white">
+                    <input type="number" id="r-angkatan" placeholder="ANGKATAN" class="w-1/2 p-4 bg-white/5 border border-white/10 rounded-2xl font-bold text-center outline-none text-white">
                 </div>
-
-                <div class="glass rounded-[40px] p-6 text-center space-y-4">
-                    <div class="command-bar bg-blue-400/10 p-3 rounded-2xl overflow-hidden mb-4">
-                        <marquee class="text-blue-400 text-xs font-bold uppercase tracking-wider">Lapor Komandan! Pastikan Atribut Lengkap Sebelum Scan Kehadiran.</marquee>
-                    </div>
-                    
-                    <div id="reader" class="hidden"></div>
-                    
-                    <div id="ui-idle" class="py-10">
-                        <div class="w-24 h-24 glass rounded-full flex items-center justify-center mx-auto mb-6 border-blue-500/30">
-                            <i data-lucide="qr-code" class="w-10 h-10 text-blue-400"></i>
-                        </div>
-                        <p class="text-gray-400 text-sm">Klik tombol dibawah untuk lapor</p>
-                    </div>
-
-                    <div id="scan-controls" class="flex flex-col sm:flex-row gap-3">
-                        <button onclick="startScan()" class="flex-grow bg-white text-slate-900 py-5 rounded-3xl font-extrabold text-lg hover:bg-blue-400 transition-all active:scale-95">SCAN QR</button>
-                        <button onclick="requestIzin()" class="sm:w-1/3 bg-white/10 py-5 rounded-3xl font-bold hover:bg-white/20 transition-all border border-white/10">IZIN</button>
-                    </div>
-                    <button id="btn-stop" onclick="stopScan()" class="hidden w-full bg-red-500 text-white py-5 rounded-3xl font-extrabold">BATALKAN</button>
-                </div>
-
+                <input type="tel" id="r-phone" placeholder="NOMOR HP/WA" class="w-full p-4 bg-white/5 border border-white/10 rounded-2xl mb-3 font-bold text-center outline-none text-white">
+                <input type="password" id="r-pin" placeholder="PIN BARU" class="w-full p-4 bg-white/5 border border-white/10 rounded-2xl mb-6 text-center tracking-[1em] font-bold outline-none text-white">
+                <button onclick="prosesRegister()" id="btn-reg" class="w-full bg-green-500 text-slate-900 py-4 rounded-[20px] font-black uppercase active:scale-95 transition-all">Ajukan</button>
+                <button onclick="toggleAuth()" class="text-[10px] text-gray-400 mt-4 uppercase underline w-full text-center">Batal</button>
             </div>
-        </section>
+        </div>
+    </div>
 
-        <section id="profile" class="page hidden fade-in py-4 max-w-lg mx-auto">
-            <div class="glass rounded-[40px] p-8 text-center">
-                <div class="w-24 h-24 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-[30px] flex items-center justify-center mx-auto text-3xl font-extrabold text-slate-900 rotate-3 mb-6">A</div>
-                <h2 class="text-2xl font-extrabold">Alex Supriyadi</h2>
-                <p class="text-blue-400 font-bold text-sm uppercase tracking-widest mt-2">Komandan Pasukan</p>
-                
-                <div class="grid grid-cols-2 gap-4 mt-10">
-                    <div class="bg-white/5 p-4 rounded-3xl border border-white/5 text-left">
-                        <p class="text-[10px] text-gray-500 uppercase">Poin Disiplin</p>
-                        <p class="text-xl font-extrabold text-green-400">+145</p>
-                    </div>
-                    <div class="bg-white/5 p-4 rounded-3xl border border-white/5 text-left">
-                        <p class="text-[10px] text-gray-500 uppercase">Pangkat</p>
-                        <p class="text-xl font-extrabold">SERSAN</p>
-                    </div>
-                </div>
+    <div id="main-app" class="hidden">
+        <div id="sidebar">
+            <h2 class="text-blue-400 font-black mb-10 tracking-widest uppercase">Prasaka</h2>
+            <div class="menu-item active" onclick="showPage('home', this)"><i data-lucide="home"></i><span class="ml-4 font-bold text-sm">Beranda</span></div>
+            <div class="menu-item" onclick="showPage('profile', this)"><i data-lucide="user"></i><span class="ml-4 font-bold text-sm">Profil</span></div>
+            <div class="menu-item" onclick="showPage('history', this)"><i data-lucide="file-text"></i><span class="ml-4 font-bold text-sm">Riwayat</span></div>
+            <button onclick="logout()" class="mt-auto flex items-center p-4 text-red-400 font-bold uppercase"><i data-lucide="log-out"></i><span class="ml-4 text-sm">Keluar</span></button>
+        </div>
+        <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+        <header>
+            <button onclick="toggleSidebar()"><i data-lucide="menu"></i></button>
+            <div class="text-center"><p class="text-[0.5rem] text-gray-500 font-bold uppercase" id="user-head">COMMANDS</p><b id="header-title" class="text-xs uppercase text-white tracking-widest">BERANDA</b></div>
+            <i data-lucide="bell" style="opacity:0.3;"></i>
+        </header>
+
+        <div id="home" class="page active">
+            <div class="bg-blue-500/10 p-2 rounded-lg mb-4 text-center overflow-hidden" id="marquee-container"></div>
+            <div class="glass-card text-center border-none bg-none mb-2">
+                <p id="date" class="text-[10px] opacity-60 uppercase font-bold mb-1"></p>
+                <h1 id="clock" class="text-6xl font-black tracking-tighter">00:00</h1>
             </div>
-        </section>
-
-        <section id="history" class="page hidden fade-in py-4 max-w-2xl mx-auto">
-            <h3 class="text-xl font-extrabold mb-6 flex items-center"><i data-lucide="file-text" class="mr-3 text-blue-400"></i> LOG LAPANGAN</h3>
-            <div id="log-container" class="space-y-3">
+            <div class="glass-card text-center">
+                <div id="reader"></div>
+                <div id="ui-idle" class="py-10">
+                    <div class="bg-white/5 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
+                        <i data-lucide="qr-code" class="text-blue-400 w-8 h-8"></i>
+                    </div>
+                    <p class="text-xs opacity-70 font-bold uppercase tracking-widest">Siap Melapor, Pelatih!</p>
                 </div>
-        </section>
-
-        <section id="gps" class="page hidden fade-in py-4 max-w-lg mx-auto">
-            <div class="glass rounded-[40px] p-8 text-center space-y-6">
-                <h3 class="text-xl font-extrabold">Area Validasi</h3>
-                <div id="gps-box" class="py-10 bg-black/30 rounded-3xl border border-white/5 flex flex-col items-center">
-                    <i data-lucide="map-pin" class="w-10 h-10 text-blue-400 mb-4 animate-bounce"></i>
-                    <p id="gps-stat" class="font-bold">Mencari Koordinat...</p>
+                <div id="scan-controls" class="flex gap-3">
+                    <button id="btn-scan" class="btn btn-main flex-[2]" onclick="startScan()">SCAN MASUK</button>
+                    <button id="btn-izin" class="btn btn-ghost flex-[1]" onclick="requestIzin()">IZIN</button>
                 </div>
-                <button onclick="getGPS()" class="w-full bg-blue-500 py-5 rounded-3xl font-extrabold text-slate-900 active:scale-95 transition-all">CEK LOKASI SAYA</button>
+                <button id="btn-stop" class="btn bg-red-500 text-white w-full hidden" onclick="stopScan()">BATALKAN SCAN</button>
             </div>
-        </section>
+        </div>
 
-    </main>
+        <div id="profile" class="page">
+            <div id="profile-content"></div>
+        </div>
+
+        <div id="history" class="page">
+            <h3 class="text-[10px] font-black text-blue-400 uppercase mb-4 tracking-widest">Riwayat Melapor</h3>
+            <div id="log-container"></div>
+        </div>
+    </div>
 
     <script>
-        // --- CONFIGURATION ---
-        // GANTI INI DENGAN URL APPS SCRIPT-MU!
-        const SCRIPT_URL = "URL_WEB_APP_LU_DISINI";
-
         lucide.createIcons();
-        const html5QrCode = new Html5Qrcode("reader");
-        let logs = JSON.parse(localStorage.getItem('paskib_logs_v3')) || [];
-
-        // 1. Splash Screen
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                const splash = document.getElementById('splash');
-                splash.style.opacity = '0';
-                setTimeout(() => splash.remove(), 700);
-            }, 2000);
-        });
-
-        // 2. Navigation SPA
-        function showPage(id, el) {
-            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden');
-            document.getElementById('page-title').innerText = id.toUpperCase();
-            
-            // Update Active Link Style
-            document.querySelectorAll('.nav-link').forEach(nav => {
-                nav.classList.remove('active', 'bg-blue-500', 'text-slate-900', 'font-bold');
-                nav.classList.add('hover:bg-white/10');
-            });
-            el.classList.add('active', 'bg-blue-500', 'text-slate-900', 'font-bold');
-            el.classList.remove('hover:bg-white/10');
-
-            if(id === 'history') renderLogs();
-            if(id === 'sidebar') toggleSidebar(); else if(window.innerWidth < 1024) toggleSidebar();
+        
+        // FIX KAMERA: Ubah jadi let dan jangan langsung di-load
+        let html5QrCode = null; 
+        
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxieMyuN0q4QbCHIQAYj4gMKj1U-AlF2NM1Elbvs11MITj5Wrgdafblkd-YkqDFFeUJ/exec"; 
+        
+        let isScanning = false;
+        let dbLogs = []; 
+        const beepSfx = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3");
+        let config = { waktuLatihan: "17:40", toleransi: 0 }, dbSiswa = [];
+        
+        // FIX STUCK STORAGE
+        let authUser = null;
+        try {
+            authUser = JSON.parse(localStorage.getItem('paskib_auth')) || null;
+        } catch(e) {
+            console.warn("Storage diblokir browser");
         }
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
-            sidebar.classList.toggle('-translate-x-full');
-            sidebar.classList.toggle('sidebar-active');
-            overlay.classList.toggle('hidden');
-        }
-
-        // 3. Realtime Clock
-        setInterval(() => {
-            const now = new Date();
-            document.getElementById('clock').innerText = now.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
-            document.getElementById('date').innerText = now.toLocaleDateString('id-ID', {weekday:'long', day:'numeric', month:'long'});
-        }, 1000);
-
-        // 4. Backend Communication
-        async function kirimKeSheets(obj) {
-            try {
-                await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(obj) });
-                console.log("Laporan terkirim ke Sheets!");
-            } catch (e) { console.error("Gagal kirim ke server", e); }
-        }
-
-        // 5. QR Scan Logic
-        function startScan() {
-            document.getElementById('reader').classList.remove('hidden');
-            document.getElementById('ui-idle').classList.add('hidden');
-            document.getElementById('scan-controls').classList.add('hidden');
-            document.getElementById('btn-stop').classList.remove('hidden');
-
-            html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: 250 }, (txt) => {
-                const now = new Date();
-                const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-                const isLate = timeStr > "15:30";
+        // FUNGSI UTAMA POPUP GLASSMORPHISM
+        function showSysDialog(opts) {
+            return new Promise((resolve) => {
+                const el = document.getElementById('sys-dialog');
+                const card = document.getElementById('sys-dialog-card');
+                const input = document.getElementById('sys-dialog-input');
                 
-                const newLog = {
-                    date: now.toLocaleDateString('id-ID', {day:'numeric', month:'short'}),
-                    nama: "Alex Supriyadi",
-                    time: timeStr,
-                    status: isLate ? "TERLAMBAT" : "TEPAT WAKTU",
-                    poin: isLate ? "-10" : "+5",
-                    keterangan: "Scan: " + txt
-                };
+                document.getElementById('sys-dialog-title').innerText = opts.title || "INFO";
+                document.getElementById('sys-dialog-msg').innerText = opts.msg || "";
+                document.getElementById('sys-dialog-title').style.color = opts.color || "var(--primary)";
+                
+                const iconContainer = document.getElementById('sys-dialog-icon');
+                let iconName = opts.type === 'error' ? 'alert-triangle' : (opts.type === 'success' ? 'check-circle' : 'info');
+                iconContainer.innerHTML = `<i data-lucide="${iconName}" style="width:40px; height:40px; color: ${opts.color || 'var(--primary)'}"></i>`;
 
-                logs.unshift(newLog);
-                localStorage.setItem('paskib_logs_v3', JSON.stringify(logs));
-                kirimKeSheets(newLog);
-                alert("LAPOR! PRESENSI DITERIMA.");
-                stopScan();
-            }).catch(err => {
-                alert("Kamera diblokir atau error!");
-                stopScan();
+                if(opts.prompt) { 
+                    input.classList.remove('hidden'); 
+                    input.value = ''; 
+                    input.placeholder = opts.placeholder || "Ketik di sini...";
+                    setTimeout(() => input.focus(), 100); 
+                } else { 
+                    input.classList.add('hidden'); 
+                }
+
+                const btns = document.getElementById('sys-dialog-btns');
+                btns.innerHTML = '';
+                
+                if(opts.showCancel) {
+                    const btnC = document.createElement('button');
+                    btnC.style.cssText = "flex: 1; padding: 16px; border-radius: 16px; font-weight: 900; text-transform: uppercase; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; cursor: pointer;";
+                    btnC.innerText = "BATAL"; 
+                    btnC.onclick = () => { closeSysDialog(); resolve(null); };
+                    btns.appendChild(btnC);
+                }
+                
+                const btnO = document.createElement('button');
+                btnO.style.cssText = "flex: 1; padding: 16px; border-radius: 16px; font-weight: 900; text-transform: uppercase; font-size: 10px; color: #0f172a; cursor: pointer; border: none; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);";
+                btnO.style.background = opts.color || "var(--primary)";
+                btnO.innerText = opts.confirmText || "OKE SIAP!";
+                btnO.onclick = () => { 
+                    const val = opts.prompt ? input.value.trim() : true; 
+                    if(opts.prompt && !val) return; 
+                    closeSysDialog(); resolve(val); 
+                };
+                btns.appendChild(btnO);
+
+                el.style.display = 'flex';
+                lucide.createIcons();
+                setTimeout(() => el.classList.add('active'), 10);
+                if(opts.type === 'error') beepSfx.play().catch(e=>{});
             });
         }
 
-        function stopScan() {
-            html5QrCode.stop().then(() => {
-                document.getElementById('reader').classList.add('hidden');
-                document.getElementById('ui-idle').classList.remove('hidden');
-                document.getElementById('scan-controls').classList.remove('hidden');
-                document.getElementById('btn-stop').classList.add('hidden');
-            }).catch(() => {
-                 document.getElementById('reader').classList.add('hidden');
-                document.getElementById('ui-idle').classList.remove('hidden');
-                document.getElementById('scan-controls').classList.remove('hidden');
-                document.getElementById('btn-stop').classList.add('hidden');
+        function closeSysDialog() {
+            const el = document.getElementById('sys-dialog');
+            el.classList.remove('active');
+            setTimeout(() => { el.style.display = 'none'; }, 300);
+        }
+
+        // FUNGSI JSONP PUSAT (ANTI CORS)
+        function requestData(params) {
+            return new Promise((resolve, reject) => {
+                const cb = 'prasaka_cb_' + Math.floor(Math.random() * 1000000);
+                const script = document.createElement('script');
+                window[cb] = (data) => { delete window[cb]; document.body.removeChild(script); resolve(data); };
+                script.src = `${SCRIPT_URL}?${params}&callback=${cb}`;
+                script.onerror = () => { document.body.removeChild(script); reject(new Error("Koneksi HQ Terputus!")); };
+                document.body.appendChild(script);
             });
         }
 
-        function requestIzin() {
-            const alasan = prompt("ALASAN IZIN:");
-            if (alasan) {
-                const now = new Date();
-                const newLog = {
-                    date: now.toLocaleDateString('id-ID', {day:'numeric', month:'short'}),
-                    nama: "Alex Supriyadi",
-                    time: "--:--",
-                    status: "IZIN",
-                    poin: "0",
-                    keterangan: alasan
-                };
-                logs.unshift(newLog);
-                localStorage.setItem('paskib_logs_v3', JSON.stringify(logs));
-                kirimKeSheets(newLog);
-                alert("Laporan Izin Terdata.");
-                renderLogs();
+        function toMins(t) {
+            if(!t || t.trim() === "") return null; 
+            const str = String(t);
+            if(str.includes('T')) { const d = new Date(str); return (d.getHours() * 60) + d.getMinutes(); }
+            const p = str.replace('.', ':').split(':'); return (parseInt(p[0]) * 60) + (parseInt(p[1]) || 0);
+        }
+
+        function hitungJarak(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; const p1 = lat1 * Math.PI/180; const p2 = lat2 * Math.PI/180;
+            const dp = (lat2-lat1) * Math.PI/180; const dl = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
+            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+        }
+
+        async function syncData() {
+            try {
+                const data = await requestData(`auth=true`);
+                dbSiswa = data.siswa || []; config = data.config || config; dbLogs = data.logs || []; 
+                document.getElementById('marquee-container').innerHTML = `<marquee scrollamount="5" class="text-[11px] font-black text-blue-400 uppercase">${config.ann || "Siap Lapor!"}</marquee>`;
+                if(config.logoUrl) document.getElementById('app-logo').src = config.logoUrl;
+                
+                if(authUser) {
+                    const current = dbSiswa.find(s => s.nama === authUser.nama);
+                    if(current && current.status === "ACTIVE") {
+                        localStorage.setItem('paskib_auth', JSON.stringify(current)); authUser = current;
+                        renderProfile(); renderLogs();
+                    } else if (current && current.status !== "ACTIVE") { logout(); }
+                }
+            } catch(e) { console.log("Sync Error / Offline Mode"); }
+        }
+
+        async function startScan() {
+            if (isScanning) return;
+            beepSfx.play().then(() => { beepSfx.pause(); beepSfx.currentTime = 0; }).catch(e => {});
+            
+            document.getElementById('btn-scan').innerText = "MENGECEK LOKASI...";
+            await syncData();
+
+            if (!config.time || config.time.trim() === "") { 
+                document.getElementById('btn-scan').innerText = "SCAN MASUK";
+                return await showSysDialog({title: "DITOLAK", msg: "Jadwal kosong.", type: "error", color: "var(--danger)"}); 
+            }
+
+            // SENSOR GPS
+            if (config.lat && config.lng) {
+                if (!navigator.geolocation) return alert("Browser tidak support GPS!");
+                
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        const jarak = hitungJarak(pos.coords.latitude, pos.coords.longitude, parseFloat(config.lat), parseFloat(config.lng));
+                        if (jarak > 50) { 
+                            document.getElementById('btn-scan').innerText = "SCAN MASUK";
+                            showSysDialog({title: "JARAK TERLALU JAUH", msg: `Anda berjarak ${Math.round(jarak)} meter dari markas. Maksimal 50m!`, type: "error", color: "var(--danger)"});
+                        } else {
+                            bukaKameraScanner();
+                        }
+                    },
+                    (err) => {
+                        document.getElementById('btn-scan').innerText = "SCAN MASUK";
+                        showSysDialog({title: "GPS ERROR", msg: "Aktifkan lokasi GPS HP lu!", type: "error", color: "var(--danger)"});
+                    }, { enableHighAccuracy: true }
+                );
+            } else {
+                bukaKameraScanner(); 
             }
         }
 
-        function renderLogs() {
-            const container = document.getElementById('log-container');
-            container.innerHTML = logs.map(l => `
-                <div class="glass p-5 rounded-3xl flex justify-between items-center border-l-4 ${l.status === 'TEPAT WAKTU' ? 'border-l-green-400' : (l.status === 'IZIN' ? 'border-l-yellow-400' : 'border-l-red-400')}">
-                    <div>
-                        <p class="font-extrabold text-sm">${l.date}</p>
-                        <p class="text-[10px] opacity-50">${l.time} WIB</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-xs font-black ${l.status === 'TEPAT WAKTU' ? 'text-green-400' : (l.status === 'IZIN' ? 'text-yellow-400' : 'text-red-400')}">${l.status}</p>
-                        <p class="text-[10px] opacity-70">${l.keterangan}</p>
-                    </div>
-                </div>
-            `).join('') || '<p class="text-center opacity-30 py-10">Belum ada riwayat...</p>';
+       function bukaKameraScanner() {
+            document.getElementById('btn-scan').innerText = "SCAN MASUK";
+            document.getElementById('reader').style.display = 'block'; 
+            document.getElementById('ui-idle').style.display = 'none'; 
+            document.getElementById('scan-controls').style.display = 'none'; 
+            document.getElementById('btn-stop').style.display = 'block';
+            isScanning = true;
+
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 15, qrbox: { width: 250, height: 250 } }, 
+                async (txt) => {
+                    stopScan(); // Matikan kamera instan pas dapet
+                    
+                    // FIX FORMAT TANGGAL: Samain mutlak kayak Admin (DDMMYYYY)
+                    const d = new Date();
+                    const today = d.getDate().toString().padStart(2,'0') + (d.getMonth()+1).toString().padStart(2,'0') + d.getFullYear();
+                    
+                    if (!txt.includes(`PRASAKA22_ABSEN_${today}`)) {
+                        return await showSysDialog({title: "QR BASI!", msg: "QR Code ini kadaluarsa atau palsu!", type: "error", color: "var(--danger)"});
+                    }
+
+                    const now = new Date();
+                    const jamSekarangString = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
+                    let jadwalAktif = config.time || config.waktuLatihan;
+                    let toleransi = config.tol || config.toleransi || 0;
+                    
+                    const isLate = ((now.getHours() * 60) + now.getMinutes()) > (toMins(jadwalAktif) + parseInt(toleransi));
+                    const statusAbsen = isLate ? "TERLAMBAT" : "TEPAT WAKTU";
+                    
+                    const logParams = `action=attendance&nama=${encodeURIComponent(authUser.nama)}&date=${now.toLocaleDateString('id-ID')}&time=${jamSekarangString}&status=${statusAbsen}&ket=Scan QR&poin=${isLate ? "-10" : "5"}`;
+                    
+                    requestData(logParams);
+                    dbLogs.unshift({ nama: authUser.nama, tanggal: now.toISOString(), jam: jamSekarangString, status: statusAbsen });
+                    renderLogs(); 
+                    await showSysDialog({title: statusAbsen, msg: `Lapor masuk: ${jamSekarangString}`, type: isLate ? "error" : "success", color: isLate ? "var(--danger)" : "var(--success)"});
+                }
+            ).catch(err => {
+                stopScan();
+                showSysDialog({title: "KAMERA ERROR", msg: "Pastikan izin kamera browser diaktifkan.", type: "error", color: "var(--danger)"});
+            });
         }
 
-        function getGPS() {
-            const stat = document.getElementById('gps-stat');
-            stat.innerText = "Mengunci Sinyal...";
-            navigator.geolocation.getCurrentPosition(p => {
-                stat.innerHTML = `AREA VALID ✅<br><span class="text-[10px] opacity-50">${p.coords.latitude.toFixed(4)}, ${p.coords.longitude.toFixed(4)}</span>`;
-            }, () => { alert("Aktifkan GPS HP-mu!"); });
+        // FIX: HANYA ADA SATU FUNGSI STOPSCAN, YANG LAIN UDAH DIHAPUS
+        function stopScan() {
+            if (!isScanning) return;
+            isScanning = false;
+            
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('reader').style.display = 'none';
+                    document.getElementById('ui-idle').style.display = 'block';
+                    document.getElementById('scan-controls').style.display = 'flex';
+                    document.getElementById('btn-stop').style.display = 'none';
+                }).catch(err => {
+                    document.getElementById('reader').style.display = 'none';
+                    document.getElementById('ui-idle').style.display = 'block';
+                    document.getElementById('scan-controls').style.display = 'flex';
+                    document.getElementById('btn-stop').style.display = 'none';
+                });
+            }
         }
+        
+        function logout() { localStorage.removeItem('paskib_auth'); location.reload(); }
+        function toggleAuth() { document.getElementById('login-form').classList.toggle('hidden'); document.getElementById('reg-form').classList.toggle('hidden'); }
+        function showPage(id, el) { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active')); document.getElementById(id).classList.add('active'); el.classList.add('active'); document.getElementById('header-title').innerText = id === 'home' ? 'Beranda' : id; if(id === 'history') { syncData(); } toggleSidebar(); }
+        function toggleSidebar() { const sb = document.getElementById('sidebar'); sb.classList.toggle('active'); document.getElementById('overlay').style.display = sb.classList.contains('active') ? 'block' : 'none'; }
+        
+        async function requestIzin() { 
+            if (!config.time || config.time.trim() === "") { 
+                await showSysDialog({
+                    title: "AKSES DITOLAK", 
+                    msg: "TIDAK BISA MENGAJUKAN IZIN KARENA TIDAK ADA JADWAL LATIHAN HARI INI.", 
+                    type: "error", 
+                    color: "var(--danger)"
+                }); 
+                return; 
+            }
+
+            const a = await showSysDialog({
+                title: "FORM IZIN", 
+                msg: "Masukkan alasan izin latihan:", 
+                prompt: true, placeholder: "Contoh: Sakit, Acara Keluarga...", 
+                showCancel: true, confirmText: "KIRIM"
+            });
+            
+            if(a) { 
+                const now = new Date(); 
+                const t = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0'); 
+                const logParams = `action=attendance&nama=${encodeURIComponent(authUser.nama)}&date=${now.toLocaleDateString('id-ID')}&time=${t}&status=IZIN&poin=0&ket=${encodeURIComponent(a)}`;
+                
+                requestData(logParams); 
+                
+                dbLogs.unshift({ nama: authUser.nama, tanggal: now.toISOString(), jam: t, status: "IZIN" });
+                renderLogs(); 
+                await showSysDialog({title: "IZIN TERDATA", msg: "Laporan izin berhasil dikirim.", type: "success", color: "var(--success)"}); 
+            } 
+        }
+
+        function renderProfile() { 
+            if(authUser) {
+                document.getElementById('profile-content').innerHTML = `
+                <div class="glass-card text-center py-10">
+                    <div class="w-20 h-20 bg-blue-500 rounded-3xl flex items-center justify-center mx-auto text-3xl font-black text-slate-900 mb-6 shadow-xl shadow-blue-500/20">${authUser.nama.charAt(0)}</div>
+                    <h2 class="text-xl font-black uppercase text-white">${authUser.nama}</h2>
+                    <p class="text-blue-400 font-bold text-[10px] uppercase tracking-widest mt-1">${authUser.role || 'ANGGOTA'} | ANGKATAN ${authUser.angkatan || '-'}</p>
+                    <div class="mt-8 flex flex-col gap-3">
+                        <div class="bg-white/5 border border-white/10 p-4 rounded-2xl flex justify-between items-center text-left"><span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">STATUS</span><span class="status-badge ${authUser.status==='ACTIVE'?'badge-active':'badge-pending'}">${authUser.status}</span></div>
+                        <div class="bg-white/5 border border-white/10 p-4 rounded-2xl flex justify-between items-center text-left"><span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">KELAS</span><span class="text-xs font-black text-white uppercase">${authUser.kelas || '-'}</span></div>
+                        <div class="bg-white/5 border border-white/10 p-4 rounded-2xl flex justify-between items-center text-left"><span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">NO HP/WA</span><span class="text-xs font-black text-white">${authUser.phone || '-'}</span></div>
+                    </div>
+                </div>`; 
+            }
+        }
+
+        function renderLogs() { 
+            const c = document.getElementById('log-container'); 
+            const my = dbLogs.filter(l => l.nama === authUser.nama).reverse(); 
+            c.innerHTML = my.map(l => {
+                let jamRapi = l.jam || '--:--';
+                if (String(jamRapi).includes('T')) { const dObj = new Date(jamRapi); jamRapi = dObj.getHours().toString().padStart(2,'0') + ":" + dObj.getMinutes().toString().padStart(2,'0'); }
+                return `
+                <div class="glass-card flex justify-between items-center border-l-4 ${l.status==='TEPAT WAKTU' || l.status==='HADIR' ? 'border-l-success' : l.status==='IZIN' ? 'border-l-blue-400' : 'border-l-danger'}">
+                    <div>
+                        <p class="font-bold text-[10px] text-white">${l.tanggal ? String(l.tanggal).substring(0,10) : ''}</p>
+                        <p class="text-[9px] opacity-50 text-white">${jamRapi}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[10px] font-black ${l.status==='TEPAT WAKTU' || l.status==='HADIR' ? 'text-success' : l.status==='IZIN' ? 'text-blue-400' : 'text-danger'}">${l.status}</p>
+                    </div>
+                </div>`;
+            }).join('') || '<p class="text-center opacity-30 text-xs py-10 uppercase font-bold">Belum Ada Riwayat Absen</p>'; 
+        }
+        
+        setInterval(() => { const now = new Date(); document.getElementById('clock').innerText = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0'); document.getElementById('date').innerText = now.toLocaleDateString('id-ID', {weekday:'long', day:'numeric', month:'long'}); }, 1000);
+        
+        // FIX: HANYA ADA SATU FUNGSI LOGIN (Memakai JSONP)
+        async function prosesLogin() {
+            const n = document.getElementById('l-name').value.trim().toUpperCase();
+            const p = document.getElementById('l-pin').value.trim();
+            const btn = document.getElementById('btn-login');
+            
+            if(!n || !p) { await showSysDialog({title: "PERHATIAN", msg: "Lengkapi data NAMA dan PIN!", type: "error", color: "var(--danger)"}); return; }
+            btn.innerText = "MENGECEK...";
+            
+            try {
+                const data = await requestData(`action=loginSiswa&nama=${encodeURIComponent(n)}&pin=${encodeURIComponent(p)}`); 
+                if(data.status === "success") { 
+                    if(data.user.status !== "ACTIVE") {
+                        await showSysDialog({title: "AKSES DITOLAK", msg: "Akun Anda belum disetujui (ACC).", type: "error", color: "var(--danger)"}); 
+                        btn.innerText = "MASUK"; 
+                    } else {
+                        localStorage.setItem('paskib_auth', JSON.stringify(data.user)); 
+                        location.reload();
+                    }
+                } else {
+                    await showSysDialog({title: "LOGIN GAGAL", msg: "Nama atau PIN salah / tidak ditemukan.", type: "error", color: "var(--danger)"}); 
+                    btn.innerText = "MASUK"; 
+                }
+            } catch(e) { 
+                await showSysDialog({title: "OFFLINE", msg: "Gagal terhubung ke server. Periksa koneksi internet.", type: "error", color: "var(--danger)"}); 
+                btn.innerText = "MASUK"; 
+            }
+        }
+
+        // FIX: HANYA ADA SATU FUNGSI REGISTER (Memakai JSONP)
+        async function prosesRegister() {
+            const n = document.getElementById('r-name').value.trim().toUpperCase();
+            const e = document.getElementById('r-email').value.trim();
+            const r = document.getElementById('r-role').value;
+            const k = document.getElementById('r-kelas').value.trim().toUpperCase();
+            const a = document.getElementById('r-angkatan').value.trim();
+            const ph = document.getElementById('r-phone').value.trim();
+            const p = document.getElementById('r-pin').value.trim();
+
+            if(!n || !e || !r || !k || !a || !ph || !p) { 
+                await showSysDialog({title: "PERHATIAN", msg: "Isi seluruh kolom data dengan lengkap!", type: "error", color: "var(--danger)"}); 
+                return; 
+            }
+            
+            const isDuplicate = dbSiswa.some(siswa => siswa.nama.toUpperCase() === n || (siswa.email && siswa.email.toUpperCase() === e.toUpperCase()));
+            if (isDuplicate) {
+                await showSysDialog({title: "PENOLAKAN SISTEM", msg: "Nama atau Email ini sudah terdaftar! Gunakan data lain atau hubungi Pelatih.", type: "error", color: "var(--danger)"});
+                return;
+            }
+
+            document.getElementById('btn-reg').innerText = "MENGIRIM...";
+            const params = `action=registerUser&nama=${encodeURIComponent(n)}&email=${encodeURIComponent(e)}&pin=${encodeURIComponent(p)}&role=${encodeURIComponent(r)}&kelas=${encodeURIComponent(k)}&angkatan=${encodeURIComponent(a)}&phone=${encodeURIComponent(ph)}`;
+            
+            try {
+                await requestData(params);
+                await showSysDialog({title: "DAFTAR BERHASIL", msg: "Silakan tunggu ACC sebelum melakukan Login.", type: "success", color: "var(--success)"});
+                location.reload();
+            } catch(err) {
+                await showSysDialog({title: "GAGAL", msg: "Server sibuk, coba lagi nanti.", type: "error", color: "var(--danger)"});
+                document.getElementById('btn-reg').innerText = "Ajukan";
+            }
+        }
+
+        // PAKSA SPLASH SCREEN HILANG 
+        setTimeout(() => {
+            const splash = document.getElementById('splash');
+            if(splash) {
+                splash.style.opacity = '0';
+                setTimeout(() => splash.remove(), 500);
+            }
+        }, 1500);
+
+        // JALANKAN SISTEM TANPA BLOKIR
+        document.addEventListener("DOMContentLoaded", () => {
+            if(authUser) {
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('main-app').classList.remove('hidden');
+                document.getElementById('user-head').innerText = authUser.nama;
+            }
+            syncData();
+        });
     </script>
 </body>
 </html>
