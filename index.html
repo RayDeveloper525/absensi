@@ -218,49 +218,33 @@
             });
         }
 
-        // ==========================================
-        // FIX: LOGIC CEK KETERLAMBATAN JAM
-        // ==========================================
         function cekApakahTerlambat(jamJadwalRaw, toleransiMenitRaw) {
             if (!jamJadwalRaw) return false;
 
             const now = new Date();
+            const batasWaktu = new Date();
             
-            // Ambil jam saat ini (real-time dari device)
-            const currentHour = now.getHours();
-            const currentMinute = now.getMinutes();
-
             let jadwalJam = 0;
             let jadwalMenit = 0;
-            let strJadwal = String(jamJadwalRaw).trim();
+            const strJadwal = String(jamJadwalRaw).trim();
             
-            // Bersihkan string jam kalau ada tanda kutip (efek dari Google Sheets)
-            strJadwal = strJadwal.replace(/'/g, ''); 
-
-            // Extract Jam dan Menit dari string jadwal (misal "15:00")
             if (strJadwal.includes('T')) {
                 const tempDate = new Date(strJadwal);
                 jadwalJam = tempDate.getHours();
                 jadwalMenit = tempDate.getMinutes();
-            } else if (strJadwal.includes(':') || strJadwal.includes('.')) {
+            } else {
                 const parts = strJadwal.replace('.', ':').split(':');
                 if (parts.length >= 2) {
                     jadwalJam = parseInt(parts[0], 10);
                     jadwalMenit = parseInt(parts[1], 10);
                 }
-            } else {
-                return false; // Format jam rusak, anggap gak telat
             }
 
-            // Hitung total menit jadwal + toleransi
+            batasWaktu.setHours(jadwalJam, jadwalMenit, 0, 0);
             const toleransi = parseInt(toleransiMenitRaw, 10) || 0;
-            const batasMenitTotal = (jadwalJam * 60) + jadwalMenit + toleransi;
-            
-            // Hitung total menit waktu sekarang
-            const waktuSekarangTotal = (currentHour * 60) + currentMinute;
+            batasWaktu.setMinutes(batasWaktu.getMinutes() + toleransi);
 
-            // Cek apakah waktu sekarang sudah melebihi batas waktu
-            return waktuSekarangTotal > batasMenitTotal;
+            return now > batasWaktu; 
         }
 
         function hitungJarak(lat1, lon1, lat2, lon2) {
@@ -307,30 +291,35 @@
                 return await showSysDialog({title: "SUDAH ABSEN", msg: "Anda sudah melakukan absen hari ini.", type: "error", color: "var(--danger)"});
             }
 
+            // ==========================================
+            // FIX MASALAH GPS TERLALU JAUH (SUPER PARSER)
+            // ==========================================
             if (config.lat && config.lng) {
                 if (!navigator.geolocation) return alert("Browser tidak support GPS!");
                 
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
+                        // FIX: Parsing ekstrim untuk membersihkan karakter aneh dan spasi tersembunyi
                         const targetLat = parseFloat(String(config.lat).replace(/,/g, '.').replace(/[^\d.-]/g, ''));
                         const targetLng = parseFloat(String(config.lng).replace(/,/g, '.').replace(/[^\d.-]/g, ''));
 
                         const hpLat = pos.coords.latitude;
                         const hpLng = pos.coords.longitude;
 
+                        // Kalau data latitude/longitude rusak atau kosong, bypass aja masuk ke kamera
                         if (isNaN(targetLat) || isNaN(targetLng)) {
                             bukaKameraScanner();
                             return;
                         }
 
                         const jarak = hitungJarak(hpLat, hpLng, targetLat, targetLng);
-                        const radiusBatas = parseInt(config.tol) || 100; // Pake settingan batas dari config, default 100
-
-                        if (jarak > radiusBatas) { 
+                        
+                        // FIX: Menambahkan report titik koordinat ke dalam error message buat bahan debug
+                        if (jarak > 100) { 
                             document.getElementById('btn-scan').innerText = "SCAN MASUK";
                             showSysDialog({
                                 title: "JARAK TERLALU JAUH", 
-                                msg: `Jarak: ${Math.round(jarak)} meter.\nMaksimal ${radiusBatas}m dari titik kumpul!`, 
+                                msg: `Jarak: ${Math.round(jarak)} meter.\n\nMarkas: ${targetLat}, ${targetLng}\nGPS HP: ${hpLat.toFixed(5)}, ${hpLng.toFixed(5)}`, 
                                 type: "error", 
                                 color: "var(--danger)"
                             });
@@ -373,8 +362,9 @@
                     const jamSekarangString = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
                     
                     let jadwalAktif = config.time || config.waktuLatihan;
-                    // Kalau di admin ngga ada settingan toleransi menit, otomatis kasih dispensasi 15 menit
-                    let toleransiJam = 15; 
+                    
+                    // UBAH JADI 0 BIAR NGGAK ADA AMPUN BUAT YANG TELAT
+                    let toleransiJam = 0; 
                     
                     const isLate = cekApakahTerlambat(jadwalAktif, toleransiJam);
                     const statusAbsen = isLate ? "TERLAMBAT" : "TEPAT WAKTU";
@@ -384,7 +374,7 @@
                     await requestData(logParams);
                     await syncData(); 
                     
-                    await showSysDialog({title: statusAbsen, msg: `Lapor masuk: ${jamSekarangString}\nStatus: ${statusAbsen}`, type: isLate ? "error" : "success", color: isLate ? "var(--danger)" : "var(--success)"});
+                    await showSysDialog({title: statusAbsen, msg: `Lapor masuk: ${jamSekarangString}`, type: isLate ? "error" : "success", color: isLate ? "var(--danger)" : "var(--success)"});
                 }
             ).catch(err => {
                 stopScan();
