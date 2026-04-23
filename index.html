@@ -197,7 +197,6 @@
 
                 el.style.display = 'flex'; lucide.createIcons();
                 setTimeout(() => el.classList.add('active'), 10);
-                if(opts.type === 'error') beepSfx.play().catch(e=>{});
             });
         }
 
@@ -222,29 +221,33 @@
             if (!jamJadwalRaw) return false;
 
             const now = new Date();
-            const batasWaktu = new Date();
-            
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+
             let jadwalJam = 0;
             let jadwalMenit = 0;
-            const strJadwal = String(jamJadwalRaw).trim();
-            
+            let strJadwal = String(jamJadwalRaw).trim();
+            strJadwal = strJadwal.replace(/'/g, ''); 
+
             if (strJadwal.includes('T')) {
                 const tempDate = new Date(strJadwal);
                 jadwalJam = tempDate.getHours();
                 jadwalMenit = tempDate.getMinutes();
-            } else {
+            } else if (strJadwal.includes(':') || strJadwal.includes('.')) {
                 const parts = strJadwal.replace('.', ':').split(':');
                 if (parts.length >= 2) {
                     jadwalJam = parseInt(parts[0], 10);
                     jadwalMenit = parseInt(parts[1], 10);
                 }
+            } else {
+                return false; 
             }
 
-            batasWaktu.setHours(jadwalJam, jadwalMenit, 0, 0);
             const toleransi = parseInt(toleransiMenitRaw, 10) || 0;
-            batasWaktu.setMinutes(batasWaktu.getMinutes() + toleransi);
+            const batasMenitTotal = (jadwalJam * 60) + jadwalMenit + toleransi;
+            const waktuSekarangTotal = (currentHour * 60) + currentMinute;
 
-            return now > batasWaktu; 
+            return waktuSekarangTotal > batasMenitTotal;
         }
 
         function hitungJarak(lat1, lon1, lat2, lon2) {
@@ -291,35 +294,30 @@
                 return await showSysDialog({title: "SUDAH ABSEN", msg: "Anda sudah melakukan absen hari ini.", type: "error", color: "var(--danger)"});
             }
 
-            // ==========================================
-            // FIX MASALAH GPS TERLALU JAUH (SUPER PARSER)
-            // ==========================================
             if (config.lat && config.lng) {
                 if (!navigator.geolocation) return alert("Browser tidak support GPS!");
                 
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
-                        // FIX: Parsing ekstrim untuk membersihkan karakter aneh dan spasi tersembunyi
                         const targetLat = parseFloat(String(config.lat).replace(/,/g, '.').replace(/[^\d.-]/g, ''));
                         const targetLng = parseFloat(String(config.lng).replace(/,/g, '.').replace(/[^\d.-]/g, ''));
 
                         const hpLat = pos.coords.latitude;
                         const hpLng = pos.coords.longitude;
 
-                        // Kalau data latitude/longitude rusak atau kosong, bypass aja masuk ke kamera
                         if (isNaN(targetLat) || isNaN(targetLng)) {
                             bukaKameraScanner();
                             return;
                         }
 
                         const jarak = hitungJarak(hpLat, hpLng, targetLat, targetLng);
-                        
-                        // FIX: Menambahkan report titik koordinat ke dalam error message buat bahan debug
-                        if (jarak > 100) { 
+                        const radiusBatas = parseInt(config.tol) || 100;
+
+                        if (jarak > radiusBatas) { 
                             document.getElementById('btn-scan').innerText = "SCAN MASUK";
                             showSysDialog({
                                 title: "JARAK TERLALU JAUH", 
-                                msg: `Jarak: ${Math.round(jarak)} meter.\n\nMarkas: ${targetLat}, ${targetLng}\nGPS HP: ${hpLat.toFixed(5)}, ${hpLng.toFixed(5)}`, 
+                                msg: `Jarak: ${Math.round(jarak)} meter.\nMaksimal ${radiusBatas}m dari titik kumpul!`, 
                                 type: "error", 
                                 color: "var(--danger)"
                             });
@@ -351,10 +349,15 @@
                 async (txt) => {
                     stopScan(); 
                     
+                    beepSfx.play().catch(e => console.log(e));
+                    
+                    document.getElementById('btn-scan').innerText = "MENYIMPAN DATA...";
+
                     const d = new Date();
                     const today = d.getDate().toString().padStart(2,'0') + (d.getMonth()+1).toString().padStart(2,'0') + d.getFullYear();
                     
                     if (!txt.includes(`PRASAKA22_ABSEN_${today}`)) {
+                        document.getElementById('btn-scan').innerText = "SCAN MASUK";
                         return await showSysDialog({title: "QR BASI!", msg: "QR Code ini kadaluarsa atau palsu!", type: "error", color: "var(--danger)"});
                     }
 
@@ -362,8 +365,6 @@
                     const jamSekarangString = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
                     
                     let jadwalAktif = config.time || config.waktuLatihan;
-                    
-                    // UBAH JADI 0 BIAR NGGAK ADA AMPUN BUAT YANG TELAT
                     let toleransiJam = 0; 
                     
                     const isLate = cekApakahTerlambat(jadwalAktif, toleransiJam);
@@ -371,10 +372,15 @@
                     
                     const logParams = `action=attendance&nama=${encodeURIComponent(authUser.nama)}&date=${now.toLocaleDateString('id-ID')}&time=${jamSekarangString}&status=${statusAbsen}&ket=Scan QR&poin=${isLate ? "-10" : "5"}`;
                     
-                    await requestData(logParams);
-                    await syncData(); 
-                    
-                    await showSysDialog({title: statusAbsen, msg: `Lapor masuk: ${jamSekarangString}`, type: isLate ? "error" : "success", color: isLate ? "var(--danger)" : "var(--success)"});
+                    try {
+                        await requestData(logParams);
+                        syncData(); 
+                        document.getElementById('btn-scan').innerText = "SCAN MASUK";
+                        await showSysDialog({title: statusAbsen, msg: `Lapor masuk: ${jamSekarangString}\nStatus: ${statusAbsen}`, type: isLate ? "error" : "success", color: isLate ? "var(--danger)" : "var(--success)"});
+                    } catch (error) {
+                        document.getElementById('btn-scan').innerText = "SCAN MASUK";
+                        await showSysDialog({title: "GAGAL", msg: "Koneksi buruk, data gagal dikirim.", type: "error", color: "var(--danger)"});
+                    }
                 }
             ).catch(err => {
                 stopScan();
