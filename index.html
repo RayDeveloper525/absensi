@@ -127,7 +127,7 @@
                     <div class="bg-white/5 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
                         <i data-lucide="qr-code" class="text-blue-400 w-8 h-8"></i>
                     </div>
-                    <p class="text-xs opacity-70 font-bold uppercase tracking-widest">Siap Melapor, Pelatih!</p>
+                    <p class="text-xs opacity-70 font-bold uppercase tracking-widest">Siap Melapor!</p>
                 </div>
                 <div id="scan-controls" class="flex gap-3">
                     <button id="btn-scan" class="btn btn-main flex-[2]" onclick="startScan()">SCAN MASUK</button>
@@ -312,7 +312,7 @@
         function bukaNotif() {
             let ann = config.ann;
             if (!ann || ann.trim() === "") {
-                ann = "Siap! Belum ada pengumuman atau instruksi terbaru dari Pelatih hari ini. Tetap stand-by!";
+                ann = "Siap! Belum ada pengumuman atau instruksi terbaru hari ini. Tetap stand-by!";
             } else {
                 localStorage.setItem('last_notif_read', config.ann);
                 document.getElementById('notif-dot').classList.add('hidden');
@@ -321,7 +321,7 @@
             }
 
             showSysDialog({
-                title: "INFO PELATIH", 
+                title: "Pengumuman", 
                 msg: ann, 
                 type: "notif", 
                 color: "var(--primary)",
