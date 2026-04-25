@@ -46,6 +46,23 @@
     </style>
 </head>
 <body>
+    <div id="permission-screen" style="position:fixed; inset:0; background:rgba(2,6,23,0.98); backdrop-filter:blur(10px); z-index:4000; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:30px; text-align:center; transition: 0.5s ease;">
+        <div class="glass-card" style="max-width:350px; border-color: rgba(56, 189, 248, 0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+            <div class="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
+                <i data-lucide="shield-alert" class="w-10 h-10 text-blue-400" style="animation: pulse 2s infinite;"></i>
+            </div>
+            <h2 class="font-black text-xl mb-3 text-white uppercase tracking-widest">Akses Dibutuhkan</h2>
+            <p class="text-[11px] text-gray-400 mb-8 font-bold leading-relaxed text-left bg-black/20 p-4 rounded-xl border border-white/5">
+                Assalamualaikum Kang/Teh! 🙏<br><br>
+                Biar sistem radar absensi berjalan akurat dan menghindari "titip absen", sistem wajib mengakses <b class="text-blue-400">Lokasi (GPS)</b> dan <b class="text-blue-400">Kamera</b> HP kamu.<br><br>
+                <span class="text-red-400 italic">*Tanpa izin ini, aplikasi tidak akan bisa dibuka.</span>
+            </p>
+            <button onclick="mintaIzinSistem()" id="btn-izin-sistem" class="w-full bg-blue-500 text-slate-900 py-4 rounded-[20px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-blue-500/20">
+                SAYA MENGERTI & IZINKAN
+            </button>
+        </div>
+    </div>
+
     <div id="splash" onclick="this.remove()"><div class="typing">ABSEN PRASAKA22</div></div>
 
     <div id="sys-dialog">
@@ -62,7 +79,7 @@
 
     <div id="auth-screen">
         <div class="w-full max-w-sm glass-card text-center auth-card my-10">
-            <img id="app-logo" src="https://upload.wikimedia.org/wikipedia/commons/b/b2/Badge_Paskibraka.png" class="w-20 h-20 mx-auto mb-6 object-contain">
+           <img id="app-logo" src="LINK_LOGO_LU_DI_SINI" class="w-20 h-20 mx-auto mb-6 object-contain">
             
             <div id="login-form">
                 <h2 class="text-xl font-black text-blue-400 mb-6 uppercase tracking-widest">Login Anggota</h2>
@@ -166,6 +183,51 @@
             authUser = JSON.parse(localStorage.getItem('paskib_auth')) || null;
         } catch(e) { console.warn("Storage diblokir browser"); }
 
+        // FUNGSI GATEKEEPER IZIN LOKASI & KAMERA
+        async function mintaIzinSistem() {
+            const btn = document.getElementById('btn-izin-sistem');
+            const screen = document.getElementById('permission-screen');
+            
+            btn.innerText = "MENGAKSES GPS...";
+            btn.style.opacity = "0.7";
+            btn.disabled = true;
+
+            try {
+                // 1. Paksa minta izin GPS
+                await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
+                });
+
+                btn.innerText = "MENGAKSES KAMERA...";
+                
+                // 2. Paksa minta izin Kamera
+                await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+
+                // Kalau lolos dua-duanya, kasih animasi ngilang yang mulus
+                btn.innerText = "AKSES DITERIMA!";
+                btn.classList.replace('bg-blue-500', 'bg-green-500');
+                
+                setTimeout(() => {
+                    screen.style.opacity = '0';
+                    screen.style.transform = 'scale(1.1)';
+                    setTimeout(() => screen.remove(), 500);
+                }, 800);
+
+            } catch (err) {
+                // Kalau ada salah satu yang ditolak/diblokir
+                btn.innerText = "SAYA MENGERTI & IZINKAN";
+                btn.style.opacity = "1";
+                btn.disabled = false;
+                
+                showSysDialog({
+                    title: "IZIN DITOLAK!", 
+                    msg: "Akses diblokir oleh browser! Buka pengaturan situs di browser kamu, lalu Izinkan Kamera dan Lokasi. Refresh halaman kalau sudah.", 
+                    type: "error", 
+                    color: "var(--danger)"
+                });
+            }
+        }
+
         function showSysDialog(opts) {
             return new Promise((resolve) => {
                 const el = document.getElementById('sys-dialog');
@@ -229,24 +291,23 @@
         }
 
         function requestData(params) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            // Kita pake URLSearchParams biar browser otomatis set mode POST yang aman dari blokir CORS
-            const response = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: new URLSearchParams(params) 
+            return new Promise(async (resolve, reject) => {
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        body: new URLSearchParams(params) 
+                    });
+                    
+                    if (!response.ok) throw new Error("Koneksi Error");
+                    
+                    const data = await response.json();
+                    resolve(data);
+                } catch (error) {
+                    console.error("Gagal Request:", error);
+                    reject(new Error("Koneksi Terputus!"));
+                }
             });
-            
-            if (!response.ok) throw new Error("Koneksi Error");
-            
-            const data = await response.json();
-            resolve(data);
-        } catch (error) {
-            console.error("Gagal Request:", error);
-            reject(new Error("Koneksi Terputus!"));
         }
-    });
-}
 
         function cekApakahTerlambat(jamJadwalRaw, toleransiMenitRaw) {
             if (!jamJadwalRaw) return false;
@@ -317,7 +378,6 @@
             } catch(e) { console.log("Sync Error / Offline Mode"); }
         }
 
-        // --- UPDATE: Fungsi Buka Notif dengan isLongText ---
         function bukaNotif() {
             let ann = config.ann;
             if (!ann || ann.trim() === "") {
@@ -334,7 +394,7 @@
                 msg: ann, 
                 type: "notif", 
                 color: "var(--primary)",
-                isLongText: true, // Memicu UI chat/paragraf panjang
+                isLongText: true, 
                 confirmText: "SIAP, MENGERTI!"
             });
         }
